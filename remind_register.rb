@@ -5,6 +5,8 @@ require 'faraday'
 require 'faraday-cookie_jar'
 require 'nokogiri'
 require 'virtus'
+require 'json'
+
 
 class RemindRegister
   class Cybozu
@@ -66,12 +68,41 @@ class RemindRegister
       attribute :name, DateTime
       attribute :start_time, DateTime
       attribute :user_name, String
+
+      def remind_time
+        start_time - Rational(15, 24 * 60) # 15分前に通知
+      end
+    end
+  end
+
+  class Slack
+    def register_reminds(events)
+      events.each { |event| register_remind(event) }
+    end
+
+    def register_remind(event)
+      conn.get ENV['SLACK_API_ADD_REMINDER_PATH'], {
+        token: ENV['SLACK_TOKEN'],
+        text: event.name,
+        time: event.remind_time.to_time.to_i,
+        user: ENV['SLACK_REMIND_USER']
+      }
+    end
+
+    private
+
+    def conn
+      @conn ||= Faraday.new(url: ENV['SLACK_API_BASE']) do |faraday|
+        faraday.adapter Faraday.default_adapter
+      end
     end
   end
 
   def register_remind_to_slack
     @schedule_collector = Cybozu::ScheduleCollector.new(ENV['CYBOZU_ACCOUNT'], ENV['CYBOZU_PASSWORD'], ENV['CYBOZU_USERNAME'])
-    p @schedule_collector.collect
+    events = @schedule_collector.collect
+    slack = Slack.new
+    slack.register_reminds(events)
   end
 end
 
