@@ -83,7 +83,7 @@ class RemindRegister
     def register_remind(event)
       conn.get ENV['SLACK_API_ADD_REMINDER_PATH'], {
         token: ENV['SLACK_TOKEN'],
-        text: event.name,
+        text: "@#{ENV['SLACK_REMIND_ACCOUNT']} #{event.start_time.strftime('%H:%M')} #{event.name}",
         time: event.remind_time.to_time.to_i,
         user: ENV['SLACK_REMIND_USER']
       }
